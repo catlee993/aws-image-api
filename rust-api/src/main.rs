@@ -18,8 +18,10 @@ use dotenv::dotenv;
 use env_logger::Env;
 use futures::StreamExt;
 use log::error;
+use rusoto_signature::{Region, SignedRequest};
 use serde::{Deserialize, Serialize};
 
+// TODO something with websockets, for fun
 //use futures::StreamExt;
 
 //use tungstenite::Message;
@@ -69,6 +71,7 @@ async fn load_parameters() -> Result<(), SsmError> {
     let resp = client.get_parameters_by_path().
         path("/").
         recursive(true).
+        with_decryption(true).
         send().await?;
 
     for param in resp.parameters().unwrap().iter() {
@@ -120,6 +123,7 @@ async fn upload_to_s3(data: Vec<u8>, key: &str) -> Result<PutObjectOutput, SdkEr
         .bucket(env::var(S3_BUCKET_KEY).unwrap())
         .key(PATH_PREFIX.to_owned() + "/" + key)
         .body(ByteStream::from(data))
+        .content_type("image/png")
         .send()
         .await;
 
@@ -165,7 +169,7 @@ async fn get_s3_items() -> Result<HttpResponse, Error> {
 
             let mut urls: Vec<String> = Vec::new();
             for k in keys {
-                let s3_url = format!("https://{}.{}.{}", bucket_name, s3_domain, k);
+                let s3_url = format!("https://{}/{}",s3_domain, k);
                 let signed = sign_url(
                     s3_url.as_str(),
                     key_pair_id.to_string(),
@@ -178,7 +182,7 @@ async fn get_s3_items() -> Result<HttpResponse, Error> {
                 success: true,
                 urls,
             };
-            Ok(headers(HttpResponse::Ok()).json(api_response))
+            Ok(image_header(headers(HttpResponse::Ok())).json(api_response))
         }
         Err(err) => {
             error!("{}", err);
@@ -191,6 +195,12 @@ fn headers(mut resp: HttpResponseBuilder) -> HttpResponseBuilder {
     resp.append_header((header::ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
         .append_header((header::ACCESS_CONTROL_ALLOW_METHODS, "POST"))
         .append_header((header::ACCESS_CONTROL_ALLOW_HEADERS, "content-type"));
+
+    resp
+}
+
+fn image_header(mut resp: HttpResponseBuilder) -> HttpResponseBuilder {
+    resp.append_header((header::CONTENT_TYPE, "image/png"));
 
     resp
 }
@@ -212,20 +222,12 @@ fn handle_upload_ok_resp() -> Result<HttpResponse, Error> {
 }
 
 async fn sign_url(s3_url: &str, key_pair_id: String, private_key: String) -> Result<String, Box<dyn StdError>> {
-    let expires = Utc::now() + Duration::from_std(
-        std::time::Duration::from_secs(60 * 60 * 24 * 30) // a month whee
-    ).unwrap();
-
-    let date_less_than = expires.timestamp() as u64;
-
     let options = SignedOptions {
         key_pair_id,
         private_key,
-        date_less_than, // 1 month
         ..Default::default()
     };
-
-    let signed_url = get_signed_url(&s3_url, &options)?;
+    let signed_url = get_signed_url(s3_url, &options).unwrap();
 
     Ok(signed_url)
 }
