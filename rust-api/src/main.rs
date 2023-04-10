@@ -163,17 +163,17 @@ async fn get_s3_items() -> Result<HttpResponse, Error> {
                 Ok(k) => { k }
                 Err(err) => {
                     error!("{}", err);
-                    return handle_image_error()
+                    return handle_image_error();
                 }
             };
 
             let mut urls: Vec<String> = Vec::new();
             for k in keys {
-                let s3_url = format!("https://{}/{}",s3_domain, k);
+                let s3_url = format!("https://{}/{}", s3_domain, k);
                 let signed = sign_url(
                     s3_url.as_str(),
                     key_pair_id.to_string(),
-                    private_key.to_string()
+                    private_key.to_string(),
                 ).await;
                 urls.push(signed.unwrap());
             }
