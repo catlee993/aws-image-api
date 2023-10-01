@@ -1,7 +1,5 @@
 use std::{env, io};
 use std::error::Error as StdError;
-use std::fs::File;
-use std::io::Read;
 
 use actix_multipart::Multipart;
 use actix_web::{App, HttpResponse, HttpResponseBuilder, HttpServer, web};
