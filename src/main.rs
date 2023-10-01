@@ -1,4 +1,4 @@
-use std::{env, io};
+use std::{env};
 use std::error::Error as StdError;
 
 use actix_multipart::Multipart;
@@ -55,9 +55,9 @@ struct GetImagesResponse {
 const PATH_PREFIX: &str = "uploaded-crap";
 const S3_BUCKET_KEY: &str = "dabucks";
 const KEY_PAIR_ID_KEY: &str = "KEY_PAIR_ID";
-const PRIVATE_KEY_PATH_KEY: &str = "PRIVATE_KEY_PATH";
 const S3_DOMAIN_KEY: &str = "S3_DOMAIN";
 const CF_KEY_KEY: &str = "CF_KEY";
+// const PRIVATE_KEY_PATH_KEY: &str = "PRIVATE_KEY_PATH";
 
 async fn load_parameters() -> Result<(), SsmError> {
     let region_provider = RegionProviderChain::default_provider().or_else("us-west-2");

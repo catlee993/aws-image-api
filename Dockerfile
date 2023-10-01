@@ -1,10 +1,12 @@
-# Use a Rust image based on Alpine Linux with musl libc
-FROM rust:latest as build
+FROM arm64v8/rust:latest as builder
 
+WORKDIR /usr/src/rust-api
 COPY ./ ./
 
-# Build your program for release
-RUN cargo build --release
+RUN cargo install --path .
 
-# Run the binary
-CMD ["./target/release/rust-api"]
+FROM arm64v8/rust:latest
+
+COPY --from=builder /usr/local/cargo/bin/rust-api /usr/local/bin/rust-api
+
+CMD ["rust-api"]
