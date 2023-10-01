@@ -255,8 +255,8 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(||
         App::new()
             .service(
-                web::resource("/junk")
-                    .route(web::post().to(post_file)).
+                web::resource("/junk").
+                    //route(web::post().to(post_file)).
                     route(web::get().to(get_s3_items))
             )).bind("0.0.0.0:8080")?
         .run()
