@@ -12,13 +12,11 @@ use aws_sdk_s3::Client as s3Client;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_ssm::{Client as SsmClient, Error as SsmError};
-use chrono::{Duration, Utc};
 use cloudfront_sign::{get_signed_url, SignedOptions};
 use dotenv::dotenv;
 use env_logger::Env;
 use futures::StreamExt;
 use log::error;
-use rusoto_signature::{Region, SignedRequest};
 use serde::{Deserialize, Serialize};
 
 // TODO something with websockets, for fun
@@ -61,6 +59,7 @@ const S3_BUCKET_KEY: &str = "dabucks";
 const KEY_PAIR_ID_KEY: &str = "KEY_PAIR_ID";
 const PRIVATE_KEY_PATH_KEY: &str = "PRIVATE_KEY_PATH";
 const S3_DOMAIN_KEY: &str = "S3_DOMAIN";
+const CF_KEY_KEY: &str = "CF_KEY";
 
 async fn load_parameters() -> Result<(), SsmError> {
     let region_provider = RegionProviderChain::default_provider().or_else("us-west-2");
@@ -152,20 +151,21 @@ async fn get_s3_items() -> Result<HttpResponse, Error> {
                 }
             }
 
-            let bucket_name = env::var(S3_BUCKET_KEY).unwrap();
             let s3_domain = env::var(S3_DOMAIN_KEY).unwrap();
             let key_pair_id = env::var(KEY_PAIR_ID_KEY).unwrap();
-            let private_key_result = get_private_key(
-                env::var(PRIVATE_KEY_PATH_KEY).unwrap()
-            );
+            // let private_key_result = get_private_key(
+            //     env::var(PRIVATE_KEY_PATH_KEY).unwrap()
+            // );
 
-            let private_key = match private_key_result {
-                Ok(k) => { k }
-                Err(err) => {
-                    error!("{}", err);
-                    return handle_image_error();
-                }
-            };
+            let private_key = env::var(CF_KEY_KEY).unwrap();
+
+            // let private_key = match private_key_result {
+            //     Ok(k) => { k }
+            //     Err(err) => {
+            //         error!("{}", err);
+            //         return handle_image_error();
+            //     }
+            // };
 
             let mut urls: Vec<String> = Vec::new();
             for k in keys {
@@ -232,12 +232,12 @@ async fn sign_url(s3_url: &str, key_pair_id: String, private_key: String) -> Res
     Ok(signed_url)
 }
 
-fn get_private_key(path: String) -> Result<String, io::Error> {
-    let mut file = File::open(path)?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-    Ok(contents.trim().to_string())
-}
+// fn get_private_key(path: String) -> Result<String, io::Error> {
+//     let mut file = File::open(path)?;
+//     let mut contents = String::new();
+//     file.read_to_string(&mut contents)?;
+//     Ok(contents.trim().to_string())
+// }
 
 async fn get_s3_client() -> S3Client {
     let region_provider = RegionProviderChain::default_provider().or_else("us-west-2");

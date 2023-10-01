@@ -1,11 +1,10 @@
+# Use a Rust image based on Alpine Linux with musl libc
 FROM rust:latest as build
-WORKDIR /app
-COPY . .
+
+COPY ./ ./
+
+# Build your program for release
 RUN cargo build --release
 
-FROM ubuntu:latest
-RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=build /app/target/release/rust-api /usr/local/bin/rust-api
-ENTRYPOINT ["rust-api"]
-
-LABEL org.label-schema.name="rust-api"
+# Run the binary
+CMD ["./target/release/rust-api"]
