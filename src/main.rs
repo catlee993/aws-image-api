@@ -15,6 +15,7 @@ use dotenv::dotenv;
 use env_logger::Env;
 use futures::StreamExt;
 use log::error;
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use serde::{Deserialize, Serialize};
 
 // TODO something with websockets, for fun
@@ -252,13 +253,19 @@ async fn main() -> std::io::Result<()> {
     let _ = load_parameters().await;
     dotenv().ok();
 
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    builder
+        .set_private_key_file("nopass.pem", SslFiletype::PEM)
+        .unwrap();
+    builder.set_certificate_chain_file("cert.pem").unwrap();
+
     HttpServer::new(||
         App::new()
             .service(
                 web::resource("/junk").
                     //route(web::post().to(post_file)).
                     route(web::get().to(get_s3_items))
-            )).bind("0.0.0.0:8080")?
+            )).bind_openssl("0.0.0.0:8080", builder)?
         .run()
         .await
 }
